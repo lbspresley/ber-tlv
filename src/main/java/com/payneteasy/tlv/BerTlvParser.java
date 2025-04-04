@@ -81,38 +81,52 @@ public class BerTlvParser {
 
         // tag
         int tagBytesCount = getTagBytesCount(aBuf, aOffset);
+        if (tagBytesCount > aLen) {
+            return null;
+        }
         BerTag tag = createTag(levelPadding, aBuf, aOffset, tagBytesCount);
         
         // length
-        int lengthBytesCount = getLengthBytesCount(aBuf, aOffset + tagBytesCount);
-        int valueLength = getDataLength(aBuf, aOffset + tagBytesCount);
+        int lengthBytesOffset = aOffset + tagBytesCount;
+        if (lengthBytesOffset >= aOffset + aLen) {
+            return null;
+        }
+        int lengthBytesCount = getLengthBytesCount(aBuf, lengthBytesOffset);
+        if (lengthBytesCount > aLen - tagBytesCount) {
+            return null;
+        }
+        int valueLength = getDataLength(aBuf, lengthBytesOffset);
         
         if (log.isDebugEnabled()) {
             log.debug("{}lenBytesCount = {}, len = {}, lenBuf = {}", 
                 levelPadding, lengthBytesCount, valueLength, 
-                HexUtil.toFormattedHexString(aBuf, aOffset + tagBytesCount, lengthBytesCount));
+                HexUtil.toFormattedHexString(aBuf, lengthBytesOffset, lengthBytesCount));
         }
 
         // value
+        int valueOffset = lengthBytesOffset + lengthBytesCount;
+        if (valueOffset + valueLength > aOffset + aLen) {
+            return null;
+        }
+
         if (tag.isConstructed()) {
             ArrayList<BerTlv> list = new ArrayList<BerTlv>();
-            addChildren(aLevel, aBuf, aOffset + tagBytesCount + lengthBytesCount, 
-                levelPadding, lengthBytesCount, valueLength, list);
-            int resultOffset = aOffset + tagBytesCount + lengthBytesCount + valueLength;
+            addChildren(aLevel, aBuf, valueOffset, levelPadding, lengthBytesCount, valueLength, list);
+            int resultOffset = valueOffset + valueLength;
             return new ParseResult(new BerTlv(tag, list), resultOffset);
         } else {
             byte[] value = new byte[valueLength];
-            System.arraycopy(aBuf, aOffset + tagBytesCount + lengthBytesCount, 
-                value, 0, valueLength);
-            int resultOffset = aOffset + tagBytesCount + lengthBytesCount + valueLength;
+            System.arraycopy(aBuf, valueOffset, value, 0, valueLength);
+            int resultOffset = valueOffset + valueLength;
             return new ParseResult(new BerTlv(tag, value), resultOffset);
         }
     }
 
     private int getTagBytesCount(byte[] aBuf, int aOffset) {
-        if ((aBuf[aOffset] & 0x1F) == 0x1F) {
+        byte firstByte = aBuf[aOffset];
+        if ((firstByte & 0x1F) == 0x1F) {  // 다중 바이트 태그
             int len = 2;
-            for (int i = aOffset + 1; i < aOffset + 10; i++) {
+            for (int i = aOffset + 1; i < aOffset + 10 && i < aBuf.length; i++) {
                 if ((aBuf[i] & 0x80) != 0x80) {
                     break;
                 }
@@ -120,7 +134,7 @@ public class BerTlvParser {
             }
             return len;
         }
-        return 1;
+        return 1;  // 단일 바이트 태그
     }
 
     private int getLengthBytesCount(byte[] aBuf, int aOffset) {

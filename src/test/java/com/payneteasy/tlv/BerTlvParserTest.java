@@ -141,4 +141,39 @@ public class BerTlvParserTest {
             Assert.assertEquals(6, tlvs.getList().get(0).getValues().size());
         }
     }
+
+    @Test
+    public void test_parsing_10_sample() {
+        String hex = "50 01 FF";  // Tag: 50 (Application Label), Length: 01, Value: FF
+        byte[] bytes = HexUtil.parseHex(hex);
+        BerTlvParser parser = new BerTlvParser(LOG);  // 로거 추가
+        BerTlvs tlvs = parser.parse(bytes, 0, bytes.length);
+
+        BerTlvLogger.log("parsed", tlvs, LOG);
+        
+        // 검증
+        Assert.assertEquals(1, tlvs.getList().size());
+        BerTlv tlv = tlvs.getList().get(0);
+        Assert.assertEquals(new BerTag(0x50), tlv.getTag());
+        Assert.assertEquals("FF", tlv.getHexValue());
+    }
+
+    @Test
+    public void test_parsing_11_sample() {
+        String hex = "3F 0A 0B 01 09 45 67 89 10 11 12 13 14 15";  // Tag: 3F 0A, Length: 0B, Value: 01 23 45 67 89 10 11 12 13 14 15
+        byte[] bytes = HexUtil.parseHex(hex);
+        BerTlvParser parser = new BerTlvParser(LOG);  // 로거 추가
+        BerTlvs tlvs = parser.parse(bytes, 0, bytes.length);
+
+        BerTlvLogger.log(" ", tlvs, LOG);
+        
+        // 검증
+        Assert.assertEquals(1, tlvs.getList().size());
+        BerTlv tlv = tlvs.getList().get(0);
+        Assert.assertEquals(new BerTag(0x3F, 0x0A), tlv.getTag());
+        Assert.assertTrue(tlvs.getList().get(0).isConstructed());
+        BerTlv tlv2 = tlvs.getList().get(1);
+        Assert.assertEquals(new BerTag(0x01), tlv2.getTag());
+        // Assert.assertEquals("01 23 45 67 89 10 11 12 13 14 15", tlv2.getHexValue());
+    }
 }
