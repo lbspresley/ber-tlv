@@ -166,13 +166,18 @@ public class BerTlvBuilder {
         return addBytes(aObject, buffer, 0, buffer.length);
     }
 
-    public BerTlvBuilder addBytes(BerTag aObject, byte[] aBytes) {
-        return addBytes(aObject, aBytes, 0, aBytes.length);
+    public BerTlvBuilder addBytes(BerTag aTag, byte[] aBytes) {
+        return addBytes(aTag, aBytes, 0, aBytes.length);
     }
 
     public BerTlvBuilder addBytes(BerTag aTag, byte[] aBytes, int aFrom, int aLength) {
         int tagLength        = aTag.bytes.length;
         int lengthBytesCount = calculateBytesCountForLength(aLength);
+        int totalLength      = tagLength + lengthBytesCount + aLength;
+
+        if (thePos + totalLength > theBuffer.length) {
+            throw new ArrayIndexOutOfBoundsException();
+        }
 
         // TAG
         System.arraycopy(aTag.bytes, 0, theBuffer, thePos, tagLength);
