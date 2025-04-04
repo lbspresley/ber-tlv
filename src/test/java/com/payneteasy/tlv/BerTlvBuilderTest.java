@@ -162,7 +162,7 @@ public class BerTlvBuilderTest {
     }
 
     @Test
-    public void getContructedTagBytes() {
+    public void getConstructedTagBytes() {
         BerTlv constructedTag = new BerTlv(new BerTag(0xE4)
                 , Arrays.asList(new BerTlv(new BerTag(0x86), HexUtil.parseHex("ED3C3B8B03928D0E0012")))
         );
